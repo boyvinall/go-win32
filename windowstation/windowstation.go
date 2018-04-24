@@ -27,7 +27,7 @@ const (
 var (
 	moduser32                   = windows.NewLazySystemDLL("user32.dll")
 	procOpenWindowStationW      = moduser32.NewProc("OpenWindowStationW")
-	procCloseWindowStationW     = moduser32.NewProc("CloseWindowStationW")
+	procCloseWindowStation      = moduser32.NewProc("CloseWindowStation")
 	procGetProcessWindowStation = moduser32.NewProc("GetProcessWindowStation")
 	procSetProcessWindowStation = moduser32.NewProc("SetProcessWindowStation")
 )
@@ -55,7 +55,7 @@ func OpenWindowStation(winSta string, inherit bool, desiredAccess uint32) (sysca
 
 func CloseWindowStation(handle syscall.Handle) error {
 	var err error
-	r0, _, errno := syscall.Syscall(procCloseWindowStationW.Addr(), 1, uintptr(handle), 0, 0)
+	r0, _, errno := syscall.Syscall(procCloseWindowStation.Addr(), 1, uintptr(handle), 0, 0)
 	if r0 == 0 || errno != 0 {
 		err = syscall.Errno(errno)
 	}
