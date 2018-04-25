@@ -16,13 +16,15 @@ var (
 	procLogonUserW = modadvapi32.NewProc("LogonUserW")
 )
 
+// https://msdn.microsoft.com/en-gb/library/windows/desktop/aa378184(v=vs.85).aspx
 const (
 	LogonInteractive = 2
 
 	LogonProviderDefault = 0
 )
 
-func LogonUser(username, domain, password string, loginType, loginProvider uint32) (syscall.Token, error) {
+// LogonUser - https://msdn.microsoft.com/en-gb/library/windows/desktop/aa378184(v=vs.85).aspx
+func LogonUser(username, domain, password string, logonType, logonProvider uint32) (syscall.Token, error) {
 	u, err := syscall.UTF16PtrFromString(username)
 	if err != nil {
 		return 0, err
@@ -39,7 +41,7 @@ func LogonUser(username, domain, password string, loginType, loginProvider uint3
 	}
 
 	var token syscall.Token
-	r0, _, errno := syscall.Syscall6(procLogonUserW.Addr(), 6, uintptr(unsafe.Pointer(u)), uintptr(unsafe.Pointer(d)), uintptr(unsafe.Pointer(p)), uintptr(loginType), uintptr(loginProvider), uintptr(unsafe.Pointer(&token)))
+	r0, _, errno := syscall.Syscall6(procLogonUserW.Addr(), 6, uintptr(unsafe.Pointer(u)), uintptr(unsafe.Pointer(d)), uintptr(unsafe.Pointer(p)), uintptr(logonType), uintptr(logonProvider), uintptr(unsafe.Pointer(&token)))
 	if r0 != 1 || errno != 0 {
 		err = syscall.Errno(errno)
 	}

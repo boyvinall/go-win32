@@ -11,6 +11,14 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+var (
+	moduser32                   = windows.NewLazySystemDLL("user32.dll")
+	procOpenWindowStationW      = moduser32.NewProc("OpenWindowStationW")
+	procCloseWindowStation      = moduser32.NewProc("CloseWindowStation")
+	procGetProcessWindowStation = moduser32.NewProc("GetProcessWindowStation")
+	procSetProcessWindowStation = moduser32.NewProc("SetProcessWindowStation")
+)
+
 // Window Station Security and Access Rights - see https://msdn.microsoft.com/en-gb/library/windows/desktop/ms687391(v=vs.85).aspx
 const (
 	WinStaEnumDesktops    = 1
@@ -18,18 +26,11 @@ const (
 	WinStaWriteAttributes = 0x10
 	WinStaEnumerate       = 0x100
 	WinStaReadScreen      = 0x200
+	WinStaAllAccess       = 0x37f
 	ReadControl           = 0x00020000
 	WriteDAC              = 0x00040000
 
 	GenericReadInteractive = syscall.STANDARD_RIGHTS_READ | WinStaEnumDesktops | WinStaEnumerate | WinStaReadAttributes | WinStaReadScreen
-)
-
-var (
-	moduser32                   = windows.NewLazySystemDLL("user32.dll")
-	procOpenWindowStationW      = moduser32.NewProc("OpenWindowStationW")
-	procCloseWindowStation      = moduser32.NewProc("CloseWindowStation")
-	procGetProcessWindowStation = moduser32.NewProc("GetProcessWindowStation")
-	procSetProcessWindowStation = moduser32.NewProc("SetProcessWindowStation")
 )
 
 // OpenWindowStation invokes the win32 function
@@ -53,6 +54,7 @@ func OpenWindowStation(winSta string, inherit bool, desiredAccess uint32) (sysca
 	return syscall.Handle(r0), err
 }
 
+// CloseWindowStation - https://msdn.microsoft.com/en-us/library/windows/desktop/ms682047(v=vs.85).aspx
 func CloseWindowStation(handle syscall.Handle) error {
 	var err error
 	r0, _, errno := syscall.Syscall(procCloseWindowStation.Addr(), 1, uintptr(handle), 0, 0)
@@ -62,6 +64,7 @@ func CloseWindowStation(handle syscall.Handle) error {
 	return err
 }
 
+// GetProcessWindowStation - https://msdn.microsoft.com/en-us/library/windows/desktop/ms683225(v=vs.85).aspx
 func GetProcessWindowStation() (syscall.Handle, error) {
 	var err error
 	r0, _, errno := syscall.Syscall(procGetProcessWindowStation.Addr(), 0, 0, 0, 0)
@@ -71,6 +74,7 @@ func GetProcessWindowStation() (syscall.Handle, error) {
 	return syscall.Handle(r0), err
 }
 
+// SetProcessWindowStation - https://msdn.microsoft.com/en-us/library/windows/desktop/ms686232(v=vs.85).aspx
 func SetProcessWindowStation(handle syscall.Handle) error {
 	var err error
 	r0, _, errno := syscall.Syscall(procSetProcessWindowStation.Addr(), 1, uintptr(handle), 0, 0)

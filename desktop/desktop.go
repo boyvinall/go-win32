@@ -11,6 +11,13 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+var (
+	moduser32        = windows.NewLazySystemDLL("user32.dll")
+	procOpenDesktopW = moduser32.NewProc("OpenDesktopW")
+	procCloseDesktop = moduser32.NewProc("CloseDesktop")
+)
+
+// https://msdn.microsoft.com/en-us/library/windows/desktop/ms682575(v=vs.85).aspx
 const (
 	CreateMenu      = 0x0004
 	CreateWindow    = 0x0002
@@ -22,13 +29,17 @@ const (
 	SwitchDesktop   = 0x0100
 	WriteObjects    = 0x0080
 
-	GenericRead = Enumerate | ReadObjects | syscall.STANDARD_RIGHTS_READ
-)
+	Delete           = 0x00010000
+	ReadPermissions  = 0x00020000
+	WritePermissions = 0x00040000
+	TakeOwnership    = 0x00080000
+	Synchronize      = 0x00100000
 
-var (
-	moduser32        = windows.NewLazySystemDLL("user32.dll")
-	procOpenDesktopW = moduser32.NewProc("OpenDesktopW")
-	procCloseDesktop = moduser32.NewProc("CloseDesktop")
+	GenericRead = Enumerate | ReadObjects | syscall.STANDARD_RIGHTS_READ
+	Write       = syscall.STANDARD_RIGHTS_WRITE | WriteObjects | CreateWindow | CreateMenu | HookControl | JournalRecord | JournalPlayback
+	Execute     = syscall.STANDARD_RIGHTS_EXECUTE | SwitchDesktop
+
+	AllAccess = syscall.STANDARD_RIGHTS_REQUIRED | ReadObjects | CreateWindow | CreateMenu | HookControl | JournalRecord | JournalPlayback | Enumerate | WriteObjects | SwitchDesktop
 )
 
 // OpenDesktop invokes the win32 function
@@ -52,6 +63,7 @@ func OpenDesktop(desktop string, flags uint32, inherit bool, desiredAccess uint3
 	return syscall.Handle(r0), err
 }
 
+// CloseDesktop - https://msdn.microsoft.com/en-us/library/windows/desktop/ms682024(v=vs.85).aspx
 func CloseDesktop(handle syscall.Handle) error {
 	var err error
 	r0, _, errno := syscall.Syscall(procCloseDesktop.Addr(), 1, uintptr(handle), 0, 0)
