@@ -13,11 +13,12 @@ import (
 )
 
 var (
-	modadvapi32          = windows.NewLazySystemDLL("advapi32.dll")
-	procGetSecurityInfo  = modadvapi32.NewProc("GetSecurityInfo")
-	procSetSecurityInfo  = modadvapi32.NewProc("SetSecurityInfo")
-	procSetEntriesInAclW = modadvapi32.NewProc("SetEntriesInAclW")
-	procIsValidSid       = modadvapi32.NewProc("IsValidSid")
+	modadvapi32             = windows.NewLazySystemDLL("advapi32.dll")
+	procGetSecurityInfo     = modadvapi32.NewProc("GetSecurityInfo")
+	procSetSecurityInfo     = modadvapi32.NewProc("SetSecurityInfo")
+	procSetEntriesInAclW    = modadvapi32.NewProc("SetEntriesInAclW")
+	procIsValidSid          = modadvapi32.NewProc("IsValidSid")
+	procSetTokenInformation = modadvapi32.NewProc("SetTokenInformation")
 )
 
 func IsValidSid(sid *syscall.SID) error {
@@ -89,6 +90,24 @@ func GetLogonSid(token syscall.Token) (*syscall.SID, error) {
 	}
 
 	return nil, errors.New("couldn't find logon sid")
+}
+
+// copied from internal/syscall/windows
+func SetTokenInformation(tokenHandle syscall.Token, tokenInformationClass uint32, tokenInformation uintptr, tokenInformationLength uint32) error {
+	var err error
+	r1, _, e1 := syscall.Syscall6(procSetTokenInformation.Addr(), 4, uintptr(tokenHandle), uintptr(tokenInformationClass), uintptr(tokenInformation), uintptr(tokenInformationLength), 0, 0)
+	if r1 == 0 {
+		if e1 != 0 {
+			err = syscall.Errno(e1)
+		} else {
+			err = syscall.EINVAL
+		}
+	}
+	return err
+}
+
+func SetTokenSessionId(token syscall.Token, sessionID uint32) error {
+	return SetTokenInformation(token, syscall.TokenSessionId, uintptr(unsafe.Pointer(&sessionID)), uint32(unsafe.Sizeof(sessionID)))
 }
 
 // SecurityDescriptor is win32 SECURITY_DESCRIPTOR - see https://msdn.microsoft.com/en-us/library/windows/desktop/aa379561(v=vs.85).aspx
