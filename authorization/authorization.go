@@ -71,7 +71,7 @@ func GetTokenGroups(token syscall.Token) (TokenGroups, error) {
 	p = unsafe.Pointer(uintptr(p) + 8)
 	for i := uint32(0); i < groupCount; i++ {
 		group := *(*syscall.SIDAndAttributes)(p)
-		tokengroups = append(tokengroups, group)
+		tokengroups[i] = group
 		p = unsafe.Pointer(uintptr(p) + unsafe.Sizeof(group))
 	}
 	return tokengroups, nil
